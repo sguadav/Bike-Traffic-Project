@@ -4,6 +4,8 @@ import numpy as np
 import re
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 
 
 # Get data function, separates the file into each column title
@@ -135,6 +137,24 @@ def precipitationAnalysis(precipitation, brooklynNum, manhattanNum, williamsburg
     return
 
 
+def predictWeather(precipitationW, total):
+    plt.scatter(precipitationW, total, color='gray')
+    precipitation_train, precipitation_test, total_train, total_test = \
+        train_test_split(precipitationW, total, test_size=0.2, random_state=0)
+    regression = LinearRegression(fit_intercept='True')
+    regression.fit(precipitation_train, total_train)
+    intercept = regression.intercept_
+    slope = regression.coef_
+    total_predict = regression.predict(precipitation_test)
+    plt.plot(precipitation_test, total_predict, color='blue', linewidth=2)
+    plt.title('Precipitation Prediction Based on Number of Cyclists')
+    plt.xlabel('Number of Cyclist')
+    plt.ylabel('Precipitation')
+    plt.savefig('PreciPred.png')
+    plt.show()
+
+
+
 if __name__ == '__main__':
     csvUrl = 'https://engineering.purdue.edu/~milind/ece20875/2019fall/assignments/project/bike-data.csv'
     # Get data function
@@ -148,7 +168,7 @@ if __name__ == '__main__':
     listCyclist = [brooklynNum, manhattanNum, williamsburgNum, queensboroNum]
 
     # CHANGE THE FOLLOWING TO DECIDE WHAT TO ANALYZE
-    typeGraph = 'Precipitation'
+    typeGraph = '0'
 
     # Plots what you decided to analyze
     if typeGraph is 'Date':
@@ -160,5 +180,8 @@ if __name__ == '__main__':
     elif typeGraph is 'Precipitation':
         precipitationAnalysis(precipitation, brooklynNum, manhattanNum, williamsburgNum, queensboroNum, totalNum)
     else:
-        print('Set typeGraph to one of these strings to analyze to analyze: '
-              '1) "Date" 2) "Day" 3) "Temperature" 4) "Precipitation"')
+        print('WARNING!')
+        print('Set typeGraph to one of these strings to analyze to analyze: 1) "Date" 2) "Day" 3) "Temperature" 4) '
+              '"Precipitation"')
+    predictWeather(precipitation, totalNum)
+
