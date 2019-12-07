@@ -4,7 +4,7 @@ import numpy as np
 import re
 import matplotlib.pyplot as plt
 from scipy.signal import savgol_filter
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
 
@@ -44,6 +44,7 @@ def getData(csvUrl):
            williamsburgNum, queensboroNum, totalNum
 
 
+# Function that creates a dictionary with a frequency of the variable. Use for days of the week
 def getDictFrequency(Dependent, listTest):
     dictionary = {}
     x = 0
@@ -56,7 +57,7 @@ def getDictFrequency(Dependent, listTest):
     return dictionary
 
 
-# Function that creates a 5 normal distributions comparing each bridge plus the total
+# Function that creates a 4 normal distributions comparing each bridge plus the total
 # to see which bridge contributes more to the total per date(to answer question 1)/day/temp/precipitation
 def dateAnalysis(date, brooklynNum, manhattanNum, williamsburgNum, queensboroNum, total):
     plt.plot(date, savgol_filter(brooklynNum, len(brooklynNum)-1, 2), label='Brooklyn')
@@ -74,23 +75,23 @@ def dateAnalysis(date, brooklynNum, manhattanNum, williamsburgNum, queensboroNum
 
 
 def dayAnalysis(day, brooklynNum, manhattanNum, williamsburgNum, queensboroNum, total):
-    #Brooklyn
+    # Brooklyn
     dictBrook = getDictFrequency(day, brooklynNum)
     dayBrook, numCyclistBrook = zip(*sorted(dictBrook.items()))
     plt.plot(dayBrook, numCyclistBrook, label='Brooklyn Bridge')
-    #Manhattan
+    # Manhattan
     dictMan = getDictFrequency(day, manhattanNum)
     dayMan, numCyclistMan = zip(*sorted(dictMan.items()))
     plt.plot(dayMan, numCyclistMan, label='Manhattan Bridge')
-    #Williamsburg
+    # Williamsburg
     dictWill = getDictFrequency(day, williamsburgNum)
     dayWill, numCyclistWill = zip(*sorted(dictWill.items()))
     plt.plot(dayWill, numCyclistWill, label='Williamsburg Bridge')
-    #Queensboro
+    # Queensboro
     dictQueens = getDictFrequency(day, queensboroNum)
     dayQueens, numCyclistQueens = zip(*sorted(dictQueens.items()))
     plt.plot(dayQueens, numCyclistQueens, label='Queensboro Bridge')
-    #Total
+    # Total
     dictTot = getDictFrequency(day, totalNum)
     dayTot, numCyclistTot = zip(*sorted(dictTot.items()))
     plt.plot(dayTot, numCyclistTot, label='Total')
@@ -137,22 +138,46 @@ def precipitationAnalysis(precipitation, brooklynNum, manhattanNum, williamsburg
     return
 
 
-def predictWeather(precipitationW, total):
-    plt.scatter(precipitationW, total, color='gray')
-    precipitation_train, precipitation_test, total_train, total_test = \
-        train_test_split(precipitationW, total, test_size=0.2, random_state=0)
-    regression = LinearRegression(fit_intercept='True')
-    regression.fit(precipitation_train, total_train)
-    intercept = regression.intercept_
-    slope = regression.coef_
-    total_predict = regression.predict(precipitation_test)
-    plt.plot(precipitation_test, total_predict, color='blue', linewidth=2)
-    plt.title('Precipitation Prediction Based on Number of Cyclists')
-    plt.xlabel('Number of Cyclist')
-    plt.ylabel('Precipitation')
-    plt.savefig('PreciPred.png')
-    plt.show()
+# Normalization function
+def normalize(X):
+    X = np.array(X / np.linalg.norm(X))
+    return X
 
+
+# This function is expected to analyze and predict whether it is raining in New York City
+# Using the number of total cyclists in the bridges.
+def predictRain(precipitationW, total):
+    x = 0
+    for dayTest in precipitationW:
+        if dayTest >= 0.25:
+            precipitationW[x] = 1
+        else:
+            precipitationW[x] = 0
+        x += 1
+
+    # Get test and train data
+    totalNorm = total
+    [total_train, total_test, precipitationW_train, precipitationW_test] = \
+        train_test_split(totalNorm, precipitationW, test_size=0.25, shuffle=True)
+    total_train = total_train.reshape(-1, 1)
+    total_test = total_test.reshape(-1, 1)
+    precipitationW_train = precipitationW_train.reshape(-1, 1)
+    precipitationW_test = precipitationW_test.reshape(-1, 1)
+
+    # Logistic Regression
+    logreg = LogisticRegression(solver='lbfgs')
+    logreg.fit(total_train, precipitationW_train)
+    precipitation_predproba = logreg.predict_proba(total_test)
+    print('Prediction Probability:')
+    print(precipitation_predproba)
+
+    plt.scatter(totalNorm, precipitationW, color='grey')
+    plt.xlabel('Number of cyclists')
+    plt.ylabel('Weather in New York (1 = Raining, 0 = Not Raining)')
+    plt.title('Raining Prediction Graph')
+    plt.show()
+    plt.savefig('PreciPred.png')
+    return
 
 
 if __name__ == '__main__':
@@ -161,6 +186,7 @@ if __name__ == '__main__':
     date, day, highTemp, lowTemp, precipitation, brooklynNum, manhattanNum, williamsburgNum, queensboroNum, totalNum = \
         getData(csvUrl)
     dataTemp = np.array([highTemp, lowTemp])
+
     # Gets the average temperature bewteen low and high
     averageTemp = np.average(dataTemp, axis=0)
 
@@ -168,7 +194,8 @@ if __name__ == '__main__':
     listCyclist = [brooklynNum, manhattanNum, williamsburgNum, queensboroNum]
 
     # CHANGE THE FOLLOWING TO DECIDE WHAT TO ANALYZE
-    typeGraph = '0'
+    # 1) Date 2) Day 3) Temperature 4) Precipitation
+    typeGraph = 'Precipitation'
 
     # Plots what you decided to analyze
     if typeGraph is 'Date':
@@ -183,5 +210,5 @@ if __name__ == '__main__':
         print('WARNING!')
         print('Set typeGraph to one of these strings to analyze to analyze: 1) "Date" 2) "Day" 3) "Temperature" 4) '
               '"Precipitation"')
-    predictWeather(precipitation, totalNum)
+    predictRain(np.array(precipitation), np.array(totalNum))
 
