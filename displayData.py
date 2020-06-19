@@ -195,8 +195,8 @@ if __name__ == '__main__':
 
     # CHANGE THE FOLLOWING TO DECIDE WHAT TO ANALYZE
     # 1) Date 2) Day 3) Temperature 4) Precipitation
-    typeGraph = 'Precipitation'
-
+    typeGraph = input("What do you want to analyze? 'Date', 'Day', 'Temperature', or 'Precipitation'? ")
+    
     # Plots what you decided to analyze
     if typeGraph is 'Date':
         dateAnalysis(date, brooklynNum, manhattanNum, williamsburgNum, queensboroNum, totalNum)
